@@ -45,7 +45,7 @@ template.innerHTML = `
         height: 100%;
         width: 100%;
         margin: auto;
-        filter: blur(200px);
+        filter: blur(10px);
         z-index: -1;
     }
 
