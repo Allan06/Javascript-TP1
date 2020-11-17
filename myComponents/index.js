@@ -268,7 +268,7 @@ template.innerHTML = `
 
     <webaudio-knob
       id="gain" tooltip="Gain:%s" src="./assets/imgs/Slider444.png"
-      height="128" width="32" sprites="127" value=0 min="0" max="1" step=0.01>
+      height="128" width="32" sprites="127" value=0 min="-1" max="1" step=0.01>
     </webaudio-knob>
   </div>
     <img src = "./assets/player-icons/020-menu.png" id="menu"/>
@@ -431,8 +431,9 @@ class MyAudioPlayer extends HTMLElement {
     // Test d"un seul gain
     this.shadowRoot
       .querySelector("#gain")
-      .addEventListener("click", (event) => {
-        console.log(event.target.id);
+      .addEventListener("input", (event) => {
+        console.log(event.target.value);
+
         this.changerGain(event.target.value, 0);
     });
   }
