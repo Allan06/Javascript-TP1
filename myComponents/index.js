@@ -5,7 +5,7 @@ import './lib/input-knobs.js';
 const getBaseURL = () => {
   const base = new URL('.', import.meta.url);
   console.log("Base = " + base);
-	return `${base}`;
+  return `${base}`;
 };
 
 // musics non utilisé
@@ -69,23 +69,6 @@ template.innerHTML = `
         align-items: center;
         border-radius: 10px;
         background:rgb(28,28,28);
-    }
-
-    .equalizer {
-        position: absolute;
-        height: 150;
-        width: 300;
-        margin: auto;
-        top: 0;
-        bottom: -100%;
-        left: 0;
-        right: 0;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 10px;
-        background:rgb(24,23,22);
     }
 
     #music-name {
@@ -224,13 +207,29 @@ template.innerHTML = `
       cursor: pointer;
       bottom: 5%;
       z-index: 4;
-      right:  20%;
+      right:  1%;
     }
+
+    #equalizer {
+      position: absolute;
+      height: 130;
+      width: 300;
+      margin: auto;
+      right: 0.5%;
+      overflow: hidden;
+      justify-content: center;
+      align-items: center;
+      border-radius: 4px;
+      background:rgba(28,28,28, 0.8);
+      bottom: 14.9%;
+      z-index: 4;
+      display: none;
+  }
 
     #marquee-rtl {
       max-width: 30em;                      /* largeur de la fenêtre */
       margin: 1em auto 2em;
-                       /* masque tout ce qui dépasse */
+                                          /* masque tout ce qui dépasse */
     }
 
     #marquee-rtl > :first-child {
@@ -249,7 +248,6 @@ template.innerHTML = `
       }
     }
   </style>
-
 
   <div id="marquee-rtl">
     <!-- le contenu défilant -->
@@ -279,11 +277,6 @@ template.innerHTML = `
     <img src = "./assets/player-icons/029-previous.png" id="previous_song"/>
 
     <webaudio-knob
-        id="knob_balance" tooltip="Balance:%s" src="./assets/imgs/Sonatom_gold.png"
-        diameter="50" sprites="100" value=0 min="-1" max="1" step=0.01>
-    </webaudio-knob>
-
-    <webaudio-knob
         id="knob_volume" src="./assets/imgs/ST_knob_slide_numbered.png"
         height="13" width="98" sprites="127" value=1 min="0" max="1"
         step=0.01>
@@ -293,16 +286,19 @@ template.innerHTML = `
 
     <div id="current-time"></div>
     <div id="duration-time"></div>
-
-    <img src = "./assets/player-icons/020-menu.png" id="menu"/>
-  </div>
-
-  <div class="equalizer">
+    <div id="equalizer">
     <webaudio-knob
-      id="knob_volume" src="./assets/imgs/Slider444.png"
+      id="knob_balance" tooltip="Balance:%s" src="./assets/imgs/Sonatom_gold.png"
+      diameter="50" sprites="100" value=0 min="-1" max="1" step=0.01>
+    </webaudio-knob>
+
+    <webaudio-knob
+      id="gain" tooltip="Gain:%s" src="./assets/imgs/Slider444.png"
       height="128" width="32" sprites="127" value=0.5 min="0" max="1"
       step=0.01>
     </webaudio-knob>
+  </div>
+    <img src = "./assets/player-icons/020-menu.png" id="menu"/>
   </div>
 
   <div id="author_assets">
@@ -317,7 +313,7 @@ class MyAudioPlayer extends HTMLElement {
     this.volume = 1;
     this.musicId = 0;
     this.src = musics[this.musicId].chemin;
-
+    this.filters = [];
     this.attachShadow({ mode: "open" });
 
     this.shadowRoot.appendChild(template.content.cloneNode(true));
@@ -354,9 +350,20 @@ class MyAudioPlayer extends HTMLElement {
     this.bufferLenght = this.analyserNode.frequencyBinCount;
     this.dataArray = new Uint8Array(this.bufferLenght);
 
+    this.eq = audioContext.createBiquadFilter();
+    this.eq.frequency.value = 60;
+    this.eq.type = "peaking";
+    this.eq.gain.value = 0;
+    this.filters.push(this.eq);
+
     sourceNode.connect(this.pannerNode)
       .connect(this.analyserNode)
+      .connect(this.filters[0])
       .connect(audioContext.destination);
+
+    for(var i = 0; i < this.filters.length - 1; i++) {
+         this.filters[i].connect(this.filters[i+1]);
+    }
 
     // Met le boutton pause en arrière plan
     this.shadowRoot.getElementById("pause").style.display="none";
@@ -365,7 +372,6 @@ class MyAudioPlayer extends HTMLElement {
     this.majTexteTemps(0, 0);
     this.visualize();
     this.declareListeners();
-
   }
 
   disconnectedCallback() {
@@ -441,14 +447,35 @@ class MyAudioPlayer extends HTMLElement {
       .addEventListener("click", (event) => {
         this.changerPositionLecture(event);
     });
+
+    // Affichage de l'aqualizer
+    this.shadowRoot
+      .querySelector("#menu")
+      .addEventListener("click", (event) => {
+        this.afficherEqualizer();
+    });
+
+    // Test d"un seul gain
+    this.shadowRoot
+      .querySelector("#gain")
+      .addEventListener("click", (event) => {
+        this.changerGain(event.target.value, 0);
+    });
   }
 
+  // ===================================================================
+  afficherEqualizer(){
+    let equalizer = this.shadowRoot.getElementById("equalizer");
+    if (equalizer.style.display == "none"){
+      equalizer.style.display="flex";
+    }else{
+      equalizer.style.display="none";
+    }
+  }
 
   play() {
     this.player.play();
-    this.shadowRoot.getElementById("play").styletransition= "3s";
     this.shadowRoot.getElementById("play").style.display="none";
-    
     this.shadowRoot.getElementById("pause").style.display="inline";
   }
 
@@ -477,7 +504,6 @@ class MyAudioPlayer extends HTMLElement {
     let barWidth = progressBar.getBoundingClientRect().width ;
 
     this.player.currentTime = (pos.pageX - barLeft) / barWidth * this.player.duration;
-    
     this.majTexteTemps(this.player.currentTime, this.player.duration);
   }
 
@@ -488,6 +514,16 @@ class MyAudioPlayer extends HTMLElement {
   majTexteTemps(tempsActuel, tempsTotal){
     this.shadowRoot.getElementById("current-time").innerText = this.formatterTemps(tempsActuel);
     this.shadowRoot.getElementById("duration-time").innerText = this.formatterTemps(tempsTotal);
+  }
+
+  changerGain(sliderVal, nbFilter){
+    let value = parseFloat(sliderVal);
+    console.log(value);
+    this.filters[nbFilter].gain.value = value;
+
+    // update output labels
+    let output = this.shadowRoot.getElementById("gain");
+    output.value = value + " dB";
   }
 
   chargerPiste(music){
@@ -527,6 +563,7 @@ class MyAudioPlayer extends HTMLElement {
     }, 100)
     this.shadowRoot.getElementById("fond").src = couverture;
   }
+
 
   visualize() {
     // Or use rgba fill to give a slight blur effect
