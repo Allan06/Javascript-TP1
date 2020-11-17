@@ -225,34 +225,7 @@ template.innerHTML = `
       z-index: 4;
       display: none;
   }
-
-    #marquee-rtl {
-      max-width: 30em;                      /* largeur de la fenêtre */
-      margin: 1em auto 2em;
-                                          /* masque tout ce qui dépasse */
-    }
-
-    #marquee-rtl > :first-child {
-      padding-right: 2em;                   /* un peu d'espace pour la transition */
-      padding-left: 100%;                   /* placement à droite du conteneur */
-      white-space: nowrap;                  /* pas de passage à la ligne */
-      animation: defilement-rtl 15s infinite linear;
-    }
-
-    @keyframes defilement-rtl {
-      0% {
-        transform: translate3d(0,0,0);      /* position initiale à droite */
-      }
-      100% {
-        transform: translate3d(-100%,0,0);  /* position finale à gauche */
-      }
-    }
   </style>
-
-  <div id="marquee-rtl">
-    <!-- le contenu défilant -->
-    <div>Le message que l'on veut voir défilé horizontalement...</div>
-  </div>
 
   <img src="./assets/covers/cover1.jpg" id="fond" />
 
@@ -286,6 +259,7 @@ template.innerHTML = `
 
     <div id="current-time"></div>
     <div id="duration-time"></div>
+
     <div id="equalizer">
     <webaudio-knob
       id="knob_balance" tooltip="Balance:%s" src="./assets/imgs/Sonatom_gold.png"
@@ -294,8 +268,7 @@ template.innerHTML = `
 
     <webaudio-knob
       id="gain" tooltip="Gain:%s" src="./assets/imgs/Slider444.png"
-      height="128" width="32" sprites="127" value=0.5 min="0" max="1"
-      step=0.01>
+      height="128" width="32" sprites="127" value=0 min="0" max="1" step=0.01>
     </webaudio-knob>
   </div>
     <img src = "./assets/player-icons/020-menu.png" id="menu"/>
@@ -459,6 +432,7 @@ class MyAudioPlayer extends HTMLElement {
     this.shadowRoot
       .querySelector("#gain")
       .addEventListener("click", (event) => {
+        console.log(event.target.id);
         this.changerGain(event.target.value, 0);
     });
   }
@@ -467,7 +441,7 @@ class MyAudioPlayer extends HTMLElement {
   afficherEqualizer(){
     let equalizer = this.shadowRoot.getElementById("equalizer");
     if (equalizer.style.display == "none"){
-      equalizer.style.display="flex";
+      equalizer.style.display="block";
     }else{
       equalizer.style.display="none";
     }
@@ -518,18 +492,17 @@ class MyAudioPlayer extends HTMLElement {
 
   changerGain(sliderVal, nbFilter){
     let value = parseFloat(sliderVal);
-    console.log(value);
     this.filters[nbFilter].gain.value = value;
 
     // update output labels
-    let output = this.shadowRoot.getElementById("gain");
-    output.value = value + " dB";
+    // let output = this.shadowRoot.getElementById("gain");
+    // output.value = value + " dB";
   }
 
   chargerPiste(music){
     this.shadowRoot.getElementById("music-name").innerText = music.nom;
     this.setAttribute("src", music.chemin);
-    this.player.src = music.chemin;
+    this.player.setAttribute("src", music.chemin) = music.chemin;
     this.changerCouverture(music.couverture);
   }
 
@@ -571,7 +544,6 @@ class MyAudioPlayer extends HTMLElement {
     // clear the canvas
     this.canvasContext.clearRect(0, 0, this.width, this.height);
 
-
     // Get the analyser data
     this.analyserNode.getByteFrequencyData(this.dataArray);
 
@@ -582,8 +554,6 @@ class MyAudioPlayer extends HTMLElement {
     // values go from 0 to 255 and the canvas heigt is 100. Let's rescale
     // before drawing. This is the scale factor
     let heightScale = this.height/160;
-    //console.log(this.player.getAttributeNames());
-    //console.log(this.player.values);
 
     for(var i = 0; i < this.bufferLenght; i++) {
       // between 0 and 255
@@ -591,8 +561,10 @@ class MyAudioPlayer extends HTMLElement {
 
       // The color is red but lighter or darker depending on the value
       this.canvasContext.fillStyle = 'rgb(' + (barHeight + 255) + ',154,16)';
+
       // scale from [0, 255] to the canvas height [0, height] pixels
       barHeight *= heightScale;
+
       // draw the bar
       this.canvasContext.fillRect(x, this.height - barHeight/2, barWidth, barHeight/2);
 
